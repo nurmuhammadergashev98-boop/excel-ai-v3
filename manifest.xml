@@ -5,12 +5,12 @@
            xmlns:ov="http://schemas.microsoft.com/office/taskpaneappversionoverrides" 
            xsi:type="TaskPaneApp">
 
-  <Id>550e8400-e29b-41d4-a716-446655440000</Id>
+  <Id>550e8400-e29b-41d4-a716-446655440001</Id>
   <Version>1.0.0.0</Version>
-  <ProviderName>Nur IT</ProviderName>
+  <ProviderName>NUR IT</ProviderName>
   <DefaultLocale>en-US</DefaultLocale>
   <DisplayName DefaultValue="Nur AI Pro" />
-  <Description DefaultValue="Excel uchun Groq AI yordamchisi"/>
+  <Description DefaultValue="Excel uchun mukammal AI Dashboard"/>
   
   <IconUrl DefaultValue="https://res-1.cdn.office.net/files/fabric/assets/item-types/20/genericfile.png"/>
   <HighResolutionIconUrl DefaultValue="https://res-1.cdn.office.net/files/fabric/assets/item-types/20/genericfile.png"/>
@@ -78,13 +78,13 @@
         <bt:Url id="GetStarted.LearnMoreUrl" DefaultValue="https://go.microsoft.com/fwlink/?LinkId=507335" />
       </bt:Urls>
       <bt:ShortStrings>
-        <bt:String id="GetStarted.Title" DefaultValue="Nur AI Pro ishga tushdi!" />
-        <bt:String id="CommandsGroup.Label" DefaultValue="Nur IT AI" />
-        <bt:String id="TaskpaneButton.Label" DefaultValue="AI Panelni ochish" />
+        <bt:String id="GetStarted.Title" DefaultValue="Nur AI Pro Tayyor!" />
+        <bt:String id="CommandsGroup.Label" DefaultValue="NUR IT" />
+        <bt:String id="TaskpaneButton.Label" DefaultValue="AI Dashboard" />
       </bt:ShortStrings>
       <bt:LongStrings>
-        <bt:String id="GetStarted.Description" DefaultValue="Excel uchun sun'iy intellekt yordamchisi." />
-        <bt:String id="TaskpaneButton.Tooltip" DefaultValue="AI yordamida formula va ma'lumotlar bilan ishlash." />
+        <bt:String id="GetStarted.Description" DefaultValue="Excel uchun eng mukammal AI yordamchisi." />
+        <bt:String id="TaskpaneButton.Tooltip" DefaultValue="AI panelini ochish va boshqarish." />
       </bt:LongStrings>
     </Resources>
   </VersionOverrides>
