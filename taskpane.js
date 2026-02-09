@@ -1,80 +1,56 @@
 Office.onReady();
 
-const chatArea = document.getElementById("chat-area");
-const promptInput = document.getElementById("prompt");
-const statusIndicator = document.getElementById("status-indicator");
+const chat = document.getElementById("chat");
+const btn = document.getElementById("sendBtn");
+const input = document.getElementById("msg");
 
-async function callGroqAI() {
-    const text = promptInput.value;
-    if (!text) return;
+btn.onclick = async () => {
+    const val = input.value.trim();
+    if (!val) return;
 
-    // Foydalanuvchi xabarini ekranga chiqarish
-    addMessage(text, 'user-msg');
-    promptInput.value = "";
-    statusIndicator.innerText = "typing...";
-
-    const apiKey = "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";
-
+    addMsg(val, 'user');
+    input.value = "";
+    
+    const key = "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";
+    
     try {
         const response = await fetch("https://api.groq.com/openai/v1/chat/completions", {
             method: "POST",
-            headers: { "Content-Type": "application/json", "Authorization": "Bearer " + apiKey },
+            headers: { "Content-Type": "application/json", "Authorization": "Bearer " + key },
             body: JSON.stringify({
                 "model": "llama-3.3-70b-versatile",
-                "messages": [
-                    {
-                        "role": "system",
-                        "content": `Sen Excel boshqaruvchi yordamchisan. Faqat JSON qaytar.
-                        Buyruq turlari:
-                        1. write: Katakka matn/son yozish
-                        2. format: Rang berish (fontColor, fillColor)
-                        3. formula: Excel formulasi qo'yish
-                        Format: {"reply": "gap", "action": "write/format/formula", "cell": "A1", "value": "...", "color": "red/#FF0000"}`
-                    },
-                    { "role": "user", "content": text }
-                ],
+                "messages": [{
+                    "role": "system",
+                    "content": "Sen Excel ustasisan. Foydalanuvchi buyrug'iga qarab JSON qaytar: {'reply': 'javob', 'action': 'write/format/formula', 'cell': 'A1', 'val': 'qiymat', 'color': 'hex_color'}"
+                }, { "role": "user", "content": val }],
                 "response_format": { "type": "json_object" }
             })
         });
 
         const data = await response.json();
         const res = JSON.parse(data.choices[0].message.content);
+        
+        addMsg(res.reply, 'ai');
 
-        // AI javobini ekranga chiqarish
-        addMessage(res.reply, 'ai-msg');
-
-        // Excel amallarini bajarish
         await Excel.run(async (context) => {
-            let range;
-            if (res.cell) {
-                range = context.workbook.worksheets.getActiveWorksheet().getRange(res.cell);
-            } else {
-                range = context.workbook.getSelectedRange();
-            }
+            const sheet = context.workbook.worksheets.getActiveWorksheet();
+            let range = res.cell ? sheet.getRange(res.cell) : context.workbook.getSelectedRange();
 
-            if (res.action === "write") range.values = [[res.value]];
-            if (res.action === "formula") range.formulas = [[res.value]];
-            if (res.action === "format") {
-                if (res.color) range.format.fill.color = res.color;
-            }
+            if (res.action === "write") range.values = [[res.val]];
+            if (res.action === "formula") range.formulas = [[res.val]];
+            if (res.action === "format") range.format.fill.color = res.color || "yellow";
 
             await context.sync();
         });
-
-    } catch (error) {
-        addMessage("Xatolik: Serverga ulanib bo'lmadi.", 'ai-msg');
-        console.error(error);
-    } finally {
-        statusIndicator.innerText = "online";
+    } catch (err) {
+        addMsg("Tizimda xatolik: " + err.message, 'ai');
     }
-}
+};
 
-function addMessage(text, className) {
-    const msgDiv = document.createElement("div");
-    msgDiv.className = `message ${className}`;
-    msgDiv.innerText = text;
-    chatArea.appendChild(msgDiv);
-    chatArea.scrollTop = chatArea.scrollHeight; // Avtomatik scroll
+function addMsg(text, type) {
+    const d = document.createElement("div");
+    d.className = `bubble ${type}`;
+    d.innerText = text;
+    chat.appendChild(d);
+    chat.scrollTop = chat.scrollHeight;
 }
-
-document.getElementById("run").onclick = callGroqAI;
