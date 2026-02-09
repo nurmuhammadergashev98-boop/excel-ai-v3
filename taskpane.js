@@ -1,28 +1,23 @@
 Office.onReady();
 
-const chatContainer = document.getElementById("chatContainer");
-const promptInput = document.getElementById("prompt");
-const sendBtn = document.getElementById("sendBtn");
-const status = document.getElementById("status");
+const chat = document.getElementById("chat-container");
+const input = document.getElementById("prompt");
+const btn = document.getElementById("sendBtn");
+const counter = document.getElementById("counter");
+let actionsDone = 0;
 
-promptInput.addEventListener("keydown", (e) => {
-    if (e.key === "Enter" && !e.shiftKey) {
-        e.preventDefault();
-        handleSend();
-    }
-});
+input.addEventListener("keydown", (e) => { if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); run(); } });
+btn.onclick = run;
 
-sendBtn.onclick = handleSend;
-
-async function handleSend() {
-    const text = promptInput.value.trim();
+async function run() {
+    const text = input.value.trim();
     if (!text) return;
 
-    addMessage(text, 'user');
-    promptInput.value = "";
-    status.innerText = "Nur AI bajarmoqda...";
+    addMsg(text, 'user');
+    input.value = "";
+    document.getElementById("status-dot").style.color = "orange";
 
-    const apiKey = "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";
+    const key = "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";
 
     try {
         const response = await fetch("https://api.groq.com/openai/v1/chat/completions", {
@@ -32,60 +27,44 @@ async function handleSend() {
                 "model": "llama-3.3-70b-versatile",
                 "messages": [{
                     "role": "system",
-                    "content": `Sen Nurmuhammadning do'stona va professional Excel yordamchisisan.
-                    Faqat JSON formatida javob ber. 
-                    
-                    Vazifalar:
-                    1. 'write': Oddiy matn yoki jadvallar uchun (values ishlatiladi).
-                    2. 'formula': Excel formulalari uchun (formulas ishlatiladi).
-                    3. 'format': Kataklarni bo'yash uchun (color ishlatiladi).
-                    
-                    Qoidalar:
-                    - Jadval yoki formula bo'lsa, 'data' massivi har doim [[...]] ko'rinishida bo'lsin.
-                    - Agar foydalanuvchi 'A1 va B1 ni qo'sh' desa, action: 'formula', data: [['=A1+B1']] bo'ladi.
-                    
-                    Namuna:
-                    {"reply": "Formula qo'yildi!", "action": "formula", "cell": "C1", "data": [["=SUM(A1:B1)"]]}`
+                    "content": `Sen professional Excel avtomatizatorisan. Foydalanuvchi buyrug'iga ko'ra JSON qaytar.
+                    Agarda jadval tuzish so'ralsa, 'data' qismiga massivlar massivini yoz (masalan: [[r1c1, r1c2], [r2c1, r2c2]]).
+                    Agarda formula bo'lsa, uni '=' bilan boshla.
+                    Struktura: {"reply": "insoniy javob", "action": "write/formula/format", "cell": "A1:B10", "data": [[...]], "color": "#hex"}`
                 }, { "role": "user", "content": text }],
                 "response_format": { "type": "json_object" }
             })
         });
 
-        const data = await response.json();
-        const res = JSON.parse(data.choices[0].message.content);
-
-        addMessage(res.reply, 'ai');
+        const json = await response.json();
+        const res = JSON.parse(json.choices[0].message.content);
+        
+        addMsg(res.reply, 'ai');
 
         await Excel.run(async (context) => {
             const sheet = context.workbook.worksheets.getActiveWorksheet();
-            const rangeAddress = res.cell || "A1";
-            const range = sheet.getRange(rangeAddress);
+            const range = sheet.getRange(res.cell || "A1");
 
-            if (res.action === "write") {
-                range.values = res.data;
-            } 
-            else if (res.action === "formula") {
-                range.formulas = res.data;
-            } 
-            else if (res.action === "format") {
-                range.format.fill.color = res.color || "yellow";
-            }
+            if (res.action === "write") range.values = res.data;
+            if (res.action === "formula") range.formulas = res.data;
+            if (res.action === "format") range.format.fill.color = res.color || "#217346";
 
             await context.sync();
+            actionsDone++;
+            counter.innerText = actionsDone;
         });
 
-    } catch (err) {
-        addMessage("Xatolik: Buyruqni tushunishda xato bo'ldi.", 'ai');
-        console.error(err);
+    } catch (e) {
+        addMsg("Tizimda xatolik: " + e.message, 'ai');
     } finally {
-        status.innerText = "online";
+        document.getElementById("status-dot").style.color = "#00ff00";
     }
 }
 
-function addMessage(text, type) {
-    const div = document.createElement("div");
-    div.className = `msg ${type}`;
-    div.innerText = text;
-    chatContainer.appendChild(div);
-    chatContainer.scrollTop = chatContainer.scrollHeight;
+function addMsg(t, c) {
+    const d = document.createElement("div");
+    d.className = `bubble ${c}`;
+    d.innerText = t;
+    chat.appendChild(d);
+    chat.parentNode.scrollTop = chat.parentNode.scrollHeight;
 }
