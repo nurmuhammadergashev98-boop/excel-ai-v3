@@ -1,74 +1,70 @@
-Office.onReady((info) => {
-    if (info.host === Office.HostType.Excel) {
-        console.log("Excel tayyor!");
-    }
-    document.getElementById("run").onclick = callGroqAI;
-});
+Office.onReady();
 
 async function callGroqAI() {
-    const promptElement = document.getElementById("prompt");
-    const status = document.getElementById("status");
+    const promptText = document.getElementById("prompt").value;
+    const statusBox = document.getElementById("status-container");
+    const statusText = document.getElementById("status-text");
+    const aiTalk = document.getElementById("ai-talk");
 
-    if (!promptElement.value) {
-        status.style.display = "block";
-        status.innerText = "Iltimos, vazifani yozing!";
-        return;
-    }
+    if (!promptText) return;
 
-    status.style.display = "block";
-    status.innerText = "AI o'ylamoqda...";
+    statusBox.style.display = "block";
+    statusText.innerText = "Nur AI o'ylamoqda...";
+    aiTalk.innerText = "";
 
-    // Kalitni o'zingizniki bilan tekshiring (gsk_...)
     const apiKey = "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";
 
     try {
         const response = await fetch("https://api.groq.com/openai/v1/chat/completions", {
             method: "POST",
-            headers: {
-                "Content-Type": "application/json",
-                "Authorization": "Bearer " + apiKey
-            },
+            headers: { "Content-Type": "application/json", "Authorization": "Bearer " + apiKey },
             body: JSON.stringify({
-                "model": "llama3-8b-8192",
+                "model": "llama-3.3-70b-versatile",
                 "messages": [
                     {
                         "role": "system",
-                        "content": "Sen faqat Excel formulasini qaytaradigan robotsan. Ortiqcha gapirma."
+                        "content": `Sen Excel boshqaruvchi yordamchisan. Foydalanuvchi buyrug'iga qarab faqat JSON qaytar.
+                        Format: {"reply": "AIdan qisqa gap", "action": "write/format/formula", "value": "qiymat", "color": "rang (agar format bo'lsa)"}
+                        Misol: "A1 ga salom deb yoz" -> {"reply": "Bajarildi!", "action": "write", "cell": "A1", "value": "salom"}
+                        Misol: "A1:A10 ni qizil qil" -> {"reply": "Bo'yab qo'ydim!", "action": "format", "cell": "A1:A10", "color": "red"}`
                     },
-                    {
-                        "role": "user",
-                        "content": promptElement.value
-                    }
+                    { "role": "user", "content": promptText }
                 ],
-                "temperature": 0.5
+                "response_format": { "type": "json_object" }
             })
         });
 
         const data = await response.json();
+        const res = JSON.parse(data.choices[0].message.content);
 
-        if (!response.ok) {
-            console.error("Groq xatosi:", data);
-            throw new Error(data.error ? data.error.message : "API xatosi");
-        }
+        aiTalk.innerText = res.reply;
 
-        const aiResponse = data.choices[0].message.content.trim();
-        status.innerText = "AI javobi: " + aiResponse;
+        await Excel.run(async (context) => {
+            let range;
+            if (res.cell) {
+                range = context.workbook.worksheets.getActiveWorksheet().getRange(res.cell);
+            } else {
+                range = context.workbook.getSelectedRange();
+            }
 
-        // Excelga yozish qismi
-        if (typeof Excel !== 'undefined') {
-            await Excel.run(async (context) => {
-                const range = context.workbook.getSelectedRange();
-                if (aiResponse.startsWith("=")) {
-                    range.formulas = [[aiResponse]];
-                } else {
-                    range.values = [[aiResponse]];
-                }
-                await context.sync();
-            });
-        }
+            if (res.action === "write" || res.action === "formula") {
+                if (res.value.startsWith("=")) range.formulas = [[res.value]];
+                else range.values = [[res.value]];
+            } 
+            
+            if (res.action === "format" && res.color) {
+                range.format.fill.color = res.color;
+            }
+
+            await context.sync();
+        });
+
+        statusText.innerText = "Tayyor!";
 
     } catch (error) {
-        console.error("Xatolik:", error);
-        status.innerText = "Xatolik: " + error.message;
+        statusText.innerText = "Xatolik yuz berdi.";
+        console.error(error);
     }
 }
+
+document.getElementById("run").onclick = callGroqAI;
