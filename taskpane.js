@@ -5,7 +5,6 @@ const promptInput = document.getElementById("prompt");
 const sendBtn = document.getElementById("sendBtn");
 const status = document.getElementById("status");
 
-// ENTER TUGMASINI BOSGANDA YUBORISH
 promptInput.addEventListener("keydown", (e) => {
     if (e.key === "Enter" && !e.shiftKey) {
         e.preventDefault();
@@ -21,19 +20,32 @@ async function handleSend() {
 
     addMessage(text, 'user');
     promptInput.value = "";
-    status.innerText = "typing...";
+    status.innerText = "Nur AI bajarmoqda...";
 
     const apiKey = "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";
 
     try {
         const response = await fetch("https://api.groq.com/openai/v1/chat/completions", {
             method: "POST",
-            headers: { "Content-Type": "application/json", "Authorization": "Bearer " + apiKey },
+            headers: { "Content-Type": "application/json", "Authorization": "Bearer " + key },
             body: JSON.stringify({
                 "model": "llama-3.3-70b-versatile",
                 "messages": [{
                     "role": "system",
-                    "content": "Sen Nurmuhammadning do'stona Excel yordamchisisan. Suhbat uslubing samimiy bo'lsin. Excel buyruqlari kelsa, faqat JSON qaytar: {'reply': 'javob', 'action': 'write/format/formula/none', 'cell': 'A1', 'val': '...', 'color': 'hex'}"
+                    "content": `Sen Nurmuhammadning do'stona va professional Excel yordamchisisan.
+                    Faqat JSON formatida javob ber. 
+                    
+                    Vazifalar:
+                    1. 'write': Oddiy matn yoki jadvallar uchun (values ishlatiladi).
+                    2. 'formula': Excel formulalari uchun (formulas ishlatiladi).
+                    3. 'format': Kataklarni bo'yash uchun (color ishlatiladi).
+                    
+                    Qoidalar:
+                    - Jadval yoki formula bo'lsa, 'data' massivi har doim [[...]] ko'rinishida bo'lsin.
+                    - Agar foydalanuvchi 'A1 va B1 ni qo'sh' desa, action: 'formula', data: [['=A1+B1']] bo'ladi.
+                    
+                    Namuna:
+                    {"reply": "Formula qo'yildi!", "action": "formula", "cell": "C1", "data": [["=SUM(A1:B1)"]]}`
                 }, { "role": "user", "content": text }],
                 "response_format": { "type": "json_object" }
             })
@@ -44,20 +56,27 @@ async function handleSend() {
 
         addMessage(res.reply, 'ai');
 
-        if (res.action !== "none") {
-            await Excel.run(async (context) => {
-                const sheet = context.workbook.worksheets.getActiveWorksheet();
-                let range = res.cell ? sheet.getRange(res.cell) : context.workbook.getSelectedRange();
+        await Excel.run(async (context) => {
+            const sheet = context.workbook.worksheets.getActiveWorksheet();
+            const rangeAddress = res.cell || "A1";
+            const range = sheet.getRange(rangeAddress);
 
-                if (res.action === "write") range.values = [[res.val]];
-                if (res.action === "formula") range.formulas = [[res.val]];
-                if (res.action === "format") range.format.fill.color = res.color || "#FFFF00";
+            if (res.action === "write") {
+                range.values = res.data;
+            } 
+            else if (res.action === "formula") {
+                range.formulas = res.data;
+            } 
+            else if (res.action === "format") {
+                range.format.fill.color = res.color || "yellow";
+            }
 
-                await context.sync();
-            });
-        }
+            await context.sync();
+        });
+
     } catch (err) {
-        addMessage("Xatolik: " + err.message, 'ai');
+        addMessage("Xatolik: Buyruqni tushunishda xato bo'ldi.", 'ai');
+        console.error(err);
     } finally {
         status.innerText = "online";
     }
