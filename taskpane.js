@@ -1,56 +1,71 @@
 Office.onReady((info) => {
     if (info.host === Office.HostType.Excel) {
-        document.getElementById("run").onclick = callGroqAI;
+        console.log("Excel muhiti tayyor.");
     }
+    // Tugma bosilishini har doim eshitib turadi
+    document.getElementById("run").onclick = callGroqAI;
 });
 
 async function callGroqAI() {
     const prompt = document.getElementById("prompt").value;
     const status = document.getElementById("status");
 
-    if (!prompt) { alert("Iltimos, vazifa yozing!"); return; }
+    if (!prompt) {
+        alert("Iltimos, vazifani yozing!");
+        return;
+    }
 
     status.style.display = "block";
     status.innerText = "AI o'ylamoqda...";
 
-    // Kalitni bo'laklab yashirish
-    const k1 = "gsk_E3fp4aq";
-    const k2 = "BioKqfmIoObtvW";
-    const k3 = "Gdyb3FY6V0O6R3BX";
-    const k4 = "MyCSmPEAXDxzONa";
+    // API Kalit (Shifrlanmagan holda, tekshirish oson bo'lishi uchun)
+    const apiKey = "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";
 
     try {
         const response = await fetch("https://api.groq.com/openai/v1/chat/completions", {
             method: "POST",
             headers: {
                 "Content-Type": "application/json",
-                "Authorization": "Bearer " + k1 + k2 + k3 + k4
+                "Authorization": "Bearer " + apiKey
             },
             body: JSON.stringify({
                 model: "mixtral-8x7b-32768",
                 messages: [
-                    { role: "system", content: "Sen faqat Excel formulasini qaytaradigan mutaxassissan. Ortiqcha gapirma." },
+                    { role: "system", content: "Sen Excel mutaxassisisan. Faqat formula yoki qisqa javob qaytar." },
                     { role: "user", content: prompt }
                 ]
             })
         });
 
+        if (!response.ok) {
+            throw new Error("API xatosi: " + response.status);
+        }
+
         const data = await response.json();
         const aiResponse = data.choices[0].message.content.trim();
 
-        await Excel.run(async (context) => {
-            const range = context.workbook.getSelectedRange();
-            if (aiResponse.startsWith("=")) {
-                range.formulas = [[aiResponse]];
-            } else {
-                range.values = [[aiResponse]];
-            }
-            await context.sync();
-        });
+        // 1. Birinchi bo'lib natijani ekranda ko'rsatamiz (Brauzerda ham ko'rinadi)
+        status.innerText = "AI Javobi: " + aiResponse;
+        
+        // 2. Agar Excel ichida bo'lsak, katakka yozamiz
+        if (typeof Excel !== 'undefined' && Office.context.host === Office.HostType.Excel) {
+            await Excel.run(async (context) => {
+                const range = context.workbook.getSelectedRange();
+                if (aiResponse.startsWith("=")) {
+                    range.formulas = [[aiResponse]];
+                } else {
+                    range.values = [[aiResponse]];
+                }
+                await context.sync();
+            });
+        } else {
+            // Agar Excel tashqarisida (brauzerda) bo'lsak, ogohlantirish chiqaramiz
+            alert("AI javob berdi: " + aiResponse + "\n(Excel topilmadi, faqat natija ko'rsatildi)");
+        }
 
-        status.innerText = "Natija: " + aiResponse;
-
-    } catch (e) {
-        status.innerText = "Xatolik: " + e.message;
+    } catch (error) {
+        status.innerText = "Xatolik: " + error.message;
+        console.error(error);
+        alert("Xatolik yuz berdi: " + error.message);
     }
 }
