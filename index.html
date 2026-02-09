@@ -2,23 +2,33 @@
 <html>
 <head>
     <meta charset="UTF-8" />
-    <title>Nur AI Pro</title>
+    <title>Nur AI Assistant</title>
     <script src="https://appsforoffice.microsoft.com/lib/1/hosted/office.js" type="text/javascript"></script>
     <style>
-        body { font-family: 'Segoe UI', sans-serif; padding: 15px; background-color: #f4f7f6; }
-        .box { background: white; padding: 15px; border-radius: 8px; box-shadow: 0 2px 10px rgba(0,0,0,0.1); }
-        h2 { color: #217346; font-size: 16px; margin-bottom: 10px; text-align: center; }
-        textarea { width: 100%; border: 1px solid #ddd; border-radius: 4px; padding: 8px; box-sizing: border-box; resize: vertical; }
-        button { background: #217346; color: white; border: none; padding: 12px; width: 100%; border-radius: 4px; cursor: pointer; margin-top: 10px; font-weight: bold; }
-        #status { margin-top: 10px; font-size: 13px; color: #333; display: none; padding: 10px; background: #e9ecef; border-radius: 4px; border-left: 4px solid #217346; }
+        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; margin: 0; padding: 0; background-color: #f0f2f5; }
+        .header { background: #217346; color: white; padding: 15px; text-align: center; font-weight: bold; font-size: 18px; box-shadow: 0 2px 5px rgba(0,0,0,0.1); }
+        .main-container { padding: 15px; }
+        .chat-box { background: white; border-radius: 12px; padding: 15px; box-shadow: 0 4px 15px rgba(0,0,0,0.05); }
+        textarea { width: 100%; border: 1px solid #ddd; border-radius: 8px; padding: 12px; font-size: 14px; box-sizing: border-box; outline: none; transition: border 0.3s; }
+        textarea:focus { border-color: #217346; }
+        button { background: #217346; color: white; border: none; padding: 12px; width: 100%; border-radius: 8px; cursor: pointer; margin-top: 10px; font-weight: bold; font-size: 15px; transition: 0.3s; }
+        button:hover { background: #1a5a37; box-shadow: 0 4px 8px rgba(0,0,0,0.2); }
+        #status-container { margin-top: 15px; border-radius: 8px; padding: 10px; font-size: 13px; display: none; }
+        .loading { background: #e8f5e9; color: #2e7d32; border-left: 4px solid #2e7d32; }
+        .response-text { margin-top: 10px; font-style: italic; color: #555; border-top: 1px solid #eee; padding-top: 10px; }
     </style>
 </head>
 <body>
-    <div class="box">
-        <h2>NUR IT | AI PRO</h2>
-        <textarea id="prompt" rows="4" placeholder="Vazifani yozing (masalan: A1 dan B1 gacha qo'shuvchi formula yoz)"></textarea>
-        <button id="run">BAJARISH</button>
-        <div id="status"></div>
+    <div class="header">NUR IT | AI ASSISTANT</div>
+    <div class="main-container">
+        <div class="chat-box">
+            <textarea id="prompt" rows="5" placeholder="Masalan: A1 ga 'Salom' deb yoz va uni qizil rangga bo'ya..."></textarea>
+            <button id="run">BUYRUQNI BAJARISH</button>
+            <div id="status-container" class="loading">
+                <div id="status-text"></div>
+                <div id="ai-talk" class="response-text"></div>
+            </div>
+        </div>
     </div>
     <script src="taskpane.js"></script>
 </body>
