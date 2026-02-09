@@ -1,16 +1,17 @@
 Office.onReady();
 
+const chatArea = document.getElementById("chat-area");
+const promptInput = document.getElementById("prompt");
+const statusIndicator = document.getElementById("status-indicator");
+
 async function callGroqAI() {
-    const promptText = document.getElementById("prompt").value;
-    const statusBox = document.getElementById("status-container");
-    const statusText = document.getElementById("status-text");
-    const aiTalk = document.getElementById("ai-talk");
+    const text = promptInput.value;
+    if (!text) return;
 
-    if (!promptText) return;
-
-    statusBox.style.display = "block";
-    statusText.innerText = "Nur AI o'ylamoqda...";
-    aiTalk.innerText = "";
+    // Foydalanuvchi xabarini ekranga chiqarish
+    addMessage(text, 'user-msg');
+    promptInput.value = "";
+    statusIndicator.innerText = "typing...";
 
     const apiKey = "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";
 
@@ -23,12 +24,14 @@ async function callGroqAI() {
                 "messages": [
                     {
                         "role": "system",
-                        "content": `Sen Excel boshqaruvchi yordamchisan. Foydalanuvchi buyrug'iga qarab faqat JSON qaytar.
-                        Format: {"reply": "AIdan qisqa gap", "action": "write/format/formula", "value": "qiymat", "color": "rang (agar format bo'lsa)"}
-                        Misol: "A1 ga salom deb yoz" -> {"reply": "Bajarildi!", "action": "write", "cell": "A1", "value": "salom"}
-                        Misol: "A1:A10 ni qizil qil" -> {"reply": "Bo'yab qo'ydim!", "action": "format", "cell": "A1:A10", "color": "red"}`
+                        "content": `Sen Excel boshqaruvchi yordamchisan. Faqat JSON qaytar.
+                        Buyruq turlari:
+                        1. write: Katakka matn/son yozish
+                        2. format: Rang berish (fontColor, fillColor)
+                        3. formula: Excel formulasi qo'yish
+                        Format: {"reply": "gap", "action": "write/format/formula", "cell": "A1", "value": "...", "color": "red/#FF0000"}`
                     },
-                    { "role": "user", "content": promptText }
+                    { "role": "user", "content": text }
                 ],
                 "response_format": { "type": "json_object" }
             })
@@ -37,8 +40,10 @@ async function callGroqAI() {
         const data = await response.json();
         const res = JSON.parse(data.choices[0].message.content);
 
-        aiTalk.innerText = res.reply;
+        // AI javobini ekranga chiqarish
+        addMessage(res.reply, 'ai-msg');
 
+        // Excel amallarini bajarish
         await Excel.run(async (context) => {
             let range;
             if (res.cell) {
@@ -47,24 +52,29 @@ async function callGroqAI() {
                 range = context.workbook.getSelectedRange();
             }
 
-            if (res.action === "write" || res.action === "formula") {
-                if (res.value.startsWith("=")) range.formulas = [[res.value]];
-                else range.values = [[res.value]];
-            } 
-            
-            if (res.action === "format" && res.color) {
-                range.format.fill.color = res.color;
+            if (res.action === "write") range.values = [[res.value]];
+            if (res.action === "formula") range.formulas = [[res.value]];
+            if (res.action === "format") {
+                if (res.color) range.format.fill.color = res.color;
             }
 
             await context.sync();
         });
 
-        statusText.innerText = "Tayyor!";
-
     } catch (error) {
-        statusText.innerText = "Xatolik yuz berdi.";
+        addMessage("Xatolik: Serverga ulanib bo'lmadi.", 'ai-msg');
         console.error(error);
+    } finally {
+        statusIndicator.innerText = "online";
     }
+}
+
+function addMessage(text, className) {
+    const msgDiv = document.createElement("div");
+    msgDiv.className = `message ${className}`;
+    msgDiv.innerText = text;
+    chatArea.appendChild(msgDiv);
+    chatArea.scrollTop = chatArea.scrollHeight; // Avtomatik scroll
 }
 
 document.getElementById("run").onclick = callGroqAI;
