@@ -18,40 +18,51 @@
         
         /* Statistik kartochkalar */
         .card { background: var(--panel); border-radius: 12px; padding: 15px; border: 1px solid #333; }
-        .card-title { font-size: 12px; color: #888; margin-bottom: 10px; }
+        .card-title { font-size: 11px; color: #888; margin-bottom: 5px; display: flex; justify-content: space-between; }
         .card-value { font-size: 20px; font-weight: bold; }
+
+        /* API Key input - GitHub uchun xavfsiz */
+        #keyInput { 
+            width: 100%; background: #2c2c2c; border: 1px solid #444; color: #aaa; 
+            font-size: 10px; padding: 5px; border-radius: 5px; margin-top: 10px; outline: none;
+        }
 
         /* Chat qismi */
         #chat-container { display: flex; flex-direction: column; gap: 10px; }
-        .bubble { padding: 10px 14px; border-radius: 10px; font-size: 13.5px; line-height: 1.5; max-width: 90%; }
-        .ai { background: #2c2c2c; border-left: 3px solid var(--primary); }
+        .bubble { padding: 10px 14px; border-radius: 10px; font-size: 13px; line-height: 1.5; max-width: 90%; word-wrap: break-word; }
+        .ai { background: #2c2c2c; border-left: 3px solid var(--primary); align-self: flex-start; }
         .user { background: var(--primary); align-self: flex-end; }
 
         .input-box { background: var(--panel); padding: 15px; border-top: 1px solid #333; display: flex; gap: 10px; }
-        textarea { flex: 1; background: #2c2c2c; border: 1px solid #444; border-radius: 8px; color: white; padding: 10px; resize: none; outline: none; height: 40px; }
+        textarea { flex: 1; background: #2c2c2c; border: 1px solid #444; border-radius: 8px; color: white; padding: 10px; resize: none; outline: none; height: 40px; font-family: inherit; }
         .send-btn { background: var(--primary); color: white; border: none; border-radius: 8px; width: 45px; cursor: pointer; display: flex; align-items: center; justify-content: center; transition: 0.3s; }
         .send-btn:hover { filter: brightness(1.2); }
     </style>
 </head>
 <body>
     <div class="top-bar">
-        <h2><i class="fas fa-microchip"></i> Nur AI Pro Dashboard</h2>
+        <h2><i class="fas fa-microchip"></i> Nur AI Pro</h2>
         <div id="status-dot" style="color: #00ff00; font-size: 10px;"><i class="fas fa-circle"></i> Online</div>
     </div>
 
     <div class="dashboard-content">
         <div class="card">
-            <div class="card-title">HISOBLANGAN MA'LUMOTLAR</div>
+            <div class="card-title">
+                SOZLAMALAR 
+                <i class="fas fa-key"></i>
+            </div>
+            <input type="password" id="keyInput" placeholder="Groq API Keyni shu yerga qo'ying...">
+            <div style="margin-top: 15px;" class="card-title">HISOBLANGAN MA'LUMOTLAR</div>
             <div class="card-value" id="counter">0</div>
         </div>
 
         <div id="chat-container">
-            <div class="bubble ai">Tayyorman. Excelni professional boshqarishni boshlaymizmi?</div>
+            <div class="bubble ai">Salom! Men tayyorman. API kalitingizni tepaga kiriting va Excelni boshqarishni boshlang.</div>
         </div>
     </div>
 
     <div class="input-box">
-        <textarea id="prompt" placeholder="Masalan: Jadval tuz yoki formula yoz..."></textarea>
+        <textarea id="prompt" placeholder="Masalan: Jadval tuz..."></textarea>
         <button class="send-btn" id="sendBtn"><i class="fas fa-paper-plane"></i></button>
     </div>
 
