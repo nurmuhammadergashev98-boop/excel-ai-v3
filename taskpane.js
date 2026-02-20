@@ -1,103 +1,34 @@
-Office.onReady(() => {
-    console.log("Office Ready!");
+// taskpane.js ichidagi fetch qismidagi 'messages' bo'limini shunga almashtiring:
+
+"messages": [
+    { 
+        "role": "system", 
+        "content": `Siz professional Excel mutaxassisiz. 
+        1. FAQAT O'ZBEK TILIDA javob bering. 
+        2. Har doim JSON qaytaring. 
+        3. Agar foydalanuvchi "o'chir" yoki "tozala" desa, action: "clear" deb belgilang.
+        4. Strukturani buzmang: {"reply": "...", "action": "write/clear/format", "cell": "A1", "data": [[]]}` 
+    },
+    { "role": "user", "content": text }
+]
+
+// Pastroqdagi Excel.run qismini esa mana shunday boyiting:
+
+await Excel.run(async (context) => {
+    const sheet = context.workbook.worksheets.getActiveWorksheet();
     
-    // Elementlarni olish
-    const chat = document.getElementById("chat-container");
-    const input = document.getElementById("prompt");
-    const btn = document.getElementById("sendBtn");
-    const counter = document.getElementById("counter");
-    const keyInput = document.getElementById("keyInput"); 
-    let actionsDone = 0;
-
-    // Kalitni eslab qolish
-    if (localStorage.getItem("groq_key")) {
-        keyInput.value = localStorage.getItem("groq_key");
+    if (res.action === "write" && res.data) {
+        const targetRange = sheet.getRange(res.cell || "A1").getResizedRange(res.data.length - 1, res.data[0].length - 1);
+        targetRange.values = res.data;
+    } 
+    else if (res.action === "clear") {
+        // Hamma ishlatilgan kataklarni topib tozalaydi
+        sheet.getUsedRange().clear();
+        addMsg("Varaq butunlay tozalandi.", "ai");
+    }
+    else if (res.action === "format") {
+        sheet.getRange(res.cell || "A1").format.fill.color = res.color || "yellow";
     }
 
-    // Xabar qo'shish funksiyasi
-    function addMsg(t, c) {
-        const d = document.createElement("div");
-        d.className = `bubble ${c}`;
-        d.innerText = t;
-        chat.appendChild(d);
-        // Scrollni pastga tushirish
-        const scrollContainer = chat.closest('.dashboard-content') || chat.parentNode;
-        scrollContainer.scrollTop = scrollContainer.scrollHeight;
-    }
-
-    // Asosiy ishga tushirish funksiyasi
-    async function run() {
-        const text = input.value.trim();
-        const key = keyInput.value.trim();
-
-        if (!text) return;
-        if (!key) {
-            addMsg("Iltimos, avval API kalitini kiriting!", 'ai');
-            return;
-        }
-
-        localStorage.setItem("groq_key", key);
-        addMsg(text, 'user');
-        input.value = "";
-        document.getElementById("status-dot").style.color = "orange";
-
-        try {
-            const response = await fetch("https://api.groq.com/openai/v1/chat/completions", {
-                method: "POST",
-                headers: { 
-                    "Content-Type": "application/json", 
-                    "Authorization": "Bearer " + key 
-                },
-                body: JSON.stringify({
-                    "model": "llama-3.3-70b-versatile",
-                    "messages": [
-                        { "role": "system", "content": "Sen professional Excel yordamchisisan. Faqat JSON qaytar: {\"reply\": \"...\", \"action\": \"write\", \"cell\": \"A1\", \"data\": [[]]}" },
-                        { "role": "user", "content": text }
-                    ],
-                    "response_format": { "type": "json_object" }
-                })
-            });
-
-            if (!response.ok) throw new Error("API ulanishda xato: " + response.status);
-
-            const json = await response.json();
-            const res = JSON.parse(json.choices[0].message.content);
-            
-            addMsg(res.reply, 'ai');
-
-            if (res.action === "write" && res.data) {
-                await Excel.run(async (context) => {
-                    const sheet = context.workbook.worksheets.getActiveWorksheet();
-                    const startRange = sheet.getRange(res.cell || "A1");
-                    const targetRange = startRange.getResizedRange(res.data.length - 1, res.data[0].length - 1);
-                    targetRange.values = res.data;
-                    await context.sync();
-                    actionsDone++;
-                    counter.innerText = actionsDone;
-                });
-            }
-        } catch (e) {
-            addMsg("Xato: " + e.message, 'ai');
-            console.error("Run Error:", e);
-        } finally {
-            document.getElementById("status-dot").style.color = "#00ff00";
-        }
-    }
-
-    // Tugmalarga hodisalarni biriktirish
-    if (btn) {
-        btn.onclick = (e) => {
-            e.preventDefault();
-            run();
-        };
-    }
-
-    if (input) {
-        input.onkeydown = (e) => {
-            if (e.key === "Enter" && !e.shiftKey) {
-                e.preventDefault();
-                run();
-            }
-        };
-    }
+    await context.sync();
 });
