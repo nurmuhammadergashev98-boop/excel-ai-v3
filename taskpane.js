@@ -1,10 +1,28 @@
-// ... (Office.onReady va boshqa o'zgaruvchilar o'sha-o'sha qoladi)
+Office.onReady();
+
+const chat = document.getElementById("chat-container");
+const input = document.getElementById("prompt");
+const btn = document.getElementById("sendBtn");
+const counter = document.getElementById("counter");
+const keyInput = document.getElementById("keyInput"); 
+let actionsDone = 0;
+
+// Kalitni eslab qolish
+if (localStorage.getItem("groq_key")) {
+    keyInput.value = localStorage.getItem("groq_key");
+}
+
+btn.onclick = run;
 
 async function run() {
     const text = input.value.trim();
     const key = keyInput.value.trim();
 
-    if (!text || !key) return;
+    if (!text) return;
+    if (!key) {
+        addMsg("Iltimos, avval API kalitini kiriting!", 'ai');
+        return;
+    }
 
     localStorage.setItem("groq_key", key);
     addMsg(text, 'user');
@@ -14,58 +32,53 @@ async function run() {
     try {
         const response = await fetch("https://api.groq.com/openai/v1/chat/completions", {
             method: "POST",
-            headers: { "Content-Type": "application/json", "Authorization": "Bearer " + key },
+            headers: { 
+                "Content-Type": "application/json", 
+                "Authorization": "Bearer " + key 
+            },
             body: JSON.stringify({
                 "model": "llama-3.3-70b-versatile",
-                "messages": [{
-                    "role": "system",
-                    "content": `Siz professional Excel yordamchisiz. Foydalanuvchi buyrug'ini tahlil qiling va FAQAT JSON qaytaring.
-                    
-                    MUHIM QOIDALAR:
-                    1. Agar foydalanuvchi jadval so'rasa, 'data' massivlar massivi bo'lsin: [[ustun1, ustun2], [qiymat1, qiymat2]].
-                    2. 'cell' har doim ma'lumot boshlanadigan bitta katak bo'lsin (masalan: "A1").
-                    3. JSON strukturasi: {"reply": "qisqa izoh", "action": "write/formula/format", "cell": "A1", "data": [[]], "color": "#hex"}`
-                }, { "role": "user", "content": text }],
+                "messages": [
+                    { "role": "system", "content": "Sen professional Excel yordamchisisan. Faqat JSON qaytar: {\"reply\": \"...\", \"action\": \"write\", \"cell\": \"A1\", \"data\": [[]]}" },
+                    { "role": "user", "content": text }
+                ],
                 "response_format": { "type": "json_object" }
             })
         });
 
+        if (!response.ok) throw new Error("API ulanishda xato: " + response.status);
+
         const json = await response.json();
         const res = JSON.parse(json.choices[0].message.content);
+        
         addMsg(res.reply, 'ai');
 
-        await Excel.run(async (context) => {
-            const sheet = context.workbook.worksheets.getActiveWorksheet();
-            
-            if (res.action === "write" && res.data) {
-                // DIQQAT: Mana shu qism o'lcham xatosini yo'qotadi
-                const rowCount = res.data.length;
-                const colCount = res.data[0].length;
-                
-                // Tanlangan katakdan boshlab, ma'lumot o'lchamiga ko'ra joyni kengaytiramiz
+        if (res.action) {
+            await Excel.run(async (context) => {
+                const sheet = context.workbook.worksheets.getActiveWorksheet();
                 const startRange = sheet.getRange(res.cell || "A1");
-                const targetRange = startRange.getResizedRange(rowCount - 1, colCount - 1);
                 
-                targetRange.values = res.data;
-                targetRange.format.autofitColumns(); // Ustunlarni chiroyli tekislaydi
-            } 
-            
-            if (res.action === "formula") {
-                sheet.getRange(res.cell || "A1").formulas = res.data;
-            }
-            
-            if (res.action === "format") {
-                sheet.getRange(res.cell || "A1").format.fill.color = res.color || "#217346";
-            }
-
-            await context.sync();
-            actionsDone++;
-            counter.innerText = actionsDone;
-        });
-
+                if (res.action === "write" && res.data) {
+                    const targetRange = startRange.getResizedRange(res.data.length - 1, res.data[0].length - 1);
+                    targetRange.values = res.data;
+                }
+                await context.sync();
+                actionsDone++;
+                counter.innerText = actionsDone;
+            });
+        }
     } catch (e) {
-        addMsg("Xatolik: " + e.message, 'ai');
+        addMsg("Xato: " + e.message, 'ai');
+        console.error(e);
     } finally {
         document.getElementById("status-dot").style.color = "#00ff00";
     }
+}
+
+function addMsg(t, c) {
+    const d = document.createElement("div");
+    d.className = `bubble ${c}`;
+    d.innerText = t;
+    chat.appendChild(d);
+    chat.parentNode.scrollTop = chat.parentNode.scrollHeight;
 }
