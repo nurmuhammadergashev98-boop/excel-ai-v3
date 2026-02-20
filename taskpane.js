@@ -6,27 +6,30 @@ Office.onReady(() => {
 
     if (localStorage.getItem("groq_key")) keyInput.value = localStorage.getItem("groq_key");
 
+    // Xabar qo'shish funksiyasi
     function addMsg(t, c, id = null) {
         const d = document.createElement("div");
         if(id) d.id = id;
         d.className = `bubble ${c}`;
         d.innerText = t;
         chat.appendChild(d);
-        chat.parentNode.scrollTop = chat.parentNode.scrollHeight;
+        // Scrollni har doim pastga tushirish
+        const container = document.querySelector(".main-container");
+        container.scrollTop = container.scrollHeight;
         return d;
     }
 
-    btn.onclick = async () => {
+    // ASOSIY RUN FUNKSIYASI
+    async function runAI() {
         const text = input.value.trim();
         const key = keyInput.value.trim();
 
         if (!text || !key) return;
+
         localStorage.setItem("groq_key", key);
-
         addMsg(text, 'user');
-        input.value = "";
+        input.value = ""; // Inputni darhol tozalash
 
-        // O'ylash animatsiyasini chiqarish
         const loadingMsg = addMsg("Nur AI o'ylamoqda", "ai dots", "loading");
         document.getElementById("status-dot").style.color = "orange";
 
@@ -37,12 +40,11 @@ Office.onReady(() => {
                 body: JSON.stringify({
                     "model": "llama-3.3-70b-versatile",
                     "messages": [
-                        { "role": "system", "content": `Sen professional Excel yordamchisisan. FAQAT O'ZBEK TILIDA javob ber. 
-                        FAQAT JSON QAYTAR: {"reply": "...", "action": "write/clear/format/formula", "cell": "A1", "data": [[]], "color": "#hex"}.
-                        - write: ma'lumot yozish.
-                        - formula: Excel formulalarini yozish (masalan: "=SUM(A1:A10)").
-                        - format: rang berish (color maydonida HEX kod bo'lsin).
-                        - clear: varaqni tozalash.` },
+                        { "role": "system", "content": `Siz professional Excel mutaxassisiz. FAQAT O'ZBEK TILIDA javob bering.
+                        Har doim JSON qaytaring: {"reply": "...", "action": "write/clear/format/formula", "cell": "A1", "data": [[]], "color": "#hex"}.
+                        - format: katakni ranglash.
+                        - formula: Excel formulasini yozish.
+                        - clear: barcha ma'lumotni o'chirish.` },
                         { "role": "user", "content": text }
                     ],
                     "response_format": { "type": "json_object" }
@@ -50,11 +52,8 @@ Office.onReady(() => {
             });
 
             const json = await response.json();
-            if (!response.ok) throw new Error(json.error.message);
-
             const res = JSON.parse(json.choices[0].message.content);
             
-            // Animatsiyani olib tashlash va haqiqiy javobni yozish
             loadingMsg.remove();
             addMsg(res.reply, "ai");
 
@@ -64,27 +63,38 @@ Office.onReady(() => {
                 if (res.action === "write" && res.data) {
                     const range = sheet.getRange(res.cell || "A1").getResizedRange(res.data.length - 1, res.data[0].length - 1);
                     range.values = res.data;
+                    range.format.autofitColumns();
                 } 
                 else if (res.action === "formula" && res.data) {
                     const range = sheet.getRange(res.cell || "A1").getResizedRange(res.data.length - 1, res.data[0].length - 1);
                     range.formulas = res.data;
                 }
                 else if (res.action === "format") {
-                    const range = sheet.getRange(res.cell || "A1");
-                    range.format.fill.color = res.color || "#FFFF00"; // Standart sariq
+                    sheet.getRange(res.cell || "A1").format.fill.color = res.color || "#FFFF00";
                 }
                 else if (res.action === "clear") {
                     sheet.getUsedRange().clear();
                 }
-
                 await context.sync();
             });
 
         } catch (e) {
             if(document.getElementById("loading")) document.getElementById("loading").remove();
-            addMsg("Kechirasiz, buyruqni tushunmadim yoki xatolik yuz berdi: " + e.message, "ai");
+            addMsg("Xatolik yuz berdi. Iltimos, qaytadan urinib ko'ring.", "ai");
+            console.error(e);
         } finally {
             document.getElementById("status-dot").style.color = "#00ff00";
         }
-    };
+    }
+
+    // ENTER TUGMASINI BOSGANDA YUBORISH
+    input.addEventListener("keydown", (e) => {
+        if (e.key === "Enter" && !e.shiftKey) {
+            e.preventDefault(); // Yangi qatorga o'tishni to'xtatadi
+            runAI();
+        }
+    });
+
+    // SAMOLYOTCHANI BOSGANDA YUBORISH
+    btn.onclick = runAI;
 });
